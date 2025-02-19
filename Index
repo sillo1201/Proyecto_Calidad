@@ -1,0 +1,125 @@
+using System;
+using System.Data.SqlClient;
+
+class Program
+{
+    // Cadena de conexión a la base de datos
+    static string connectionString = "Server=localhost; Database=SistemaTickets; Integrated Security=True;";
+
+    static void Main(string[] args)
+    {
+        Console.WriteLine("Ingrese su nombre de usuario:");
+        string nombreUsuario = Console.ReadLine();
+
+        if (EsAdministrador(nombreUsuario))
+        {
+            Console.WriteLine("Bienvenido, Administrador.");
+            AdministrarSistema();
+        }
+        else
+        {
+            Console.WriteLine("Bienvenido, Usuario.");
+            CrearTicket(nombreUsuario);
+        }
+    }
+
+    static bool EsAdministrador(string nombreUsuario)
+    {
+        bool esAdmin = false;
+        using (SqlConnection connection = new SqlConnection(connectionString))
+        {
+            connection.Open();
+            string query = "SELECT es_administrador FROM usuarios WHERE nombre_usuario = @nombreUsuario";
+            SqlCommand command = new SqlCommand(query, connection);
+            command.Parameters.AddWithValue("@nombreUsuario", nombreUsuario);
+            SqlDataReader reader = command.ExecuteReader();
+
+            if (reader.Read())
+            {
+                esAdmin = reader.GetBoolean(0);
+            }
+        }
+        return esAdmin;
+    }
+
+    static void AdministrarSistema()
+    {
+        Console.WriteLine("Seleccione una opción:");
+        Console.WriteLine("1. Agregar nuevo usuario");
+        Console.WriteLine("2. Cambiar estado de ticket");
+        int opcion = int.Parse(Console.ReadLine());
+
+        switch (opcion)
+        {
+            case 1:
+                AgregarUsuario();
+                break;
+            case 2:
+                CambiarEstadoTicket();
+                break;
+            default:
+                Console.WriteLine("Opción no válida.");
+                break;
+        }
+    }
+
+    static void AgregarUsuario()
+    {
+        Console.WriteLine("Ingrese el nombre del nuevo usuario:");
+        string nuevoNombre = Console.ReadLine();
+
+        Console.WriteLine("¿Es administrador? (true/false):");
+        bool esAdministrador = bool.Parse(Console.ReadLine());
+
+        using (SqlConnection connection = new SqlConnection(connectionString))
+        {
+            connection.Open();
+            string query = "INSERT INTO usuarios (nombre_usuario, es_administrador) VALUES (@nombre_usuario, @es_administrador)";
+            SqlCommand command = new SqlCommand(query, connection);
+            command.Parameters.AddWithValue("@nombre_usuario", nuevoNombre);
+            command.Parameters.AddWithValue("@es_administrador", esAdministrador);
+            command.ExecuteNonQuery();
+        }
+
+        Console.WriteLine("Usuario agregado exitosamente.");
+    }
+
+    static void CambiarEstadoTicket()
+    {
+        Console.WriteLine("Ingrese el ID del ticket:");
+        int idTicket = int.Parse(Console.ReadLine());
+
+        Console.WriteLine("Ingrese el nuevo estado del ticket:");
+        string nuevoEstado = Console.ReadLine();
+
+        using (SqlConnection connection = new SqlConnection(connectionString))
+        {
+            connection.Open();
+            string query = "UPDATE tickets SET estado_ticket = @estado_ticket WHERE id_ticket = @id_ticket";
+            SqlCommand command = new SqlCommand(query, connection);
+            command.Parameters.AddWithValue("@estado_ticket", nuevoEstado);
+            command.Parameters.AddWithValue("@id_ticket", idTicket);
+            command.ExecuteNonQuery();
+        }
+
+        Console.WriteLine("Estado del ticket actualizado.");
+    }
+
+    static void CrearTicket(string nombreUsuario)
+    {
+        Console.WriteLine("Ingrese su solicitud:");
+        string solicitud = Console.ReadLine();
+
+        using (SqlConnection connection = new SqlConnection(connectionString))
+        {
+            connection.Open();
+            string query = "INSERT INTO tickets (id_usuario, solicitud, estado_ticket) VALUES ((SELECT id_usuario FROM usuarios WHERE nombre_usuario = @nombreUsuario), @solicitud, 'Abierto')";
+            SqlCommand command = new SqlCommand(query, connection);
+            command.Parameters.AddWithValue("@nombreUsuario", nombreUsuario);
+            command.Parameters.AddWithValue("@solicitud", solicitud);
+            command.ExecuteNonQuery();
+        }
+
+        Console.WriteLine("Ticket creado exitosamente.");
+    }
+}
