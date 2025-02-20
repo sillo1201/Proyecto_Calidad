@@ -1,10 +1,9 @@
+using MySql.Data.MySqlClient;
 using System;
-using System.Data.SqlClient;
 
 class Program
 {
-    // Cadena de conexión a la base de datos
-    static string connectionString = "Server=localhost; Database=SistemaTickets; Integrated Security=True;";
+    static string connectionString = "Server=localhost; Database=sistematickets; Uid=root; Pwd=;"; // Ajusta si tienes una contraseña
 
     static void Main(string[] args)
     {
@@ -26,13 +25,13 @@ class Program
     static bool EsAdministrador(string nombreUsuario)
     {
         bool esAdmin = false;
-        using (SqlConnection connection = new SqlConnection(connectionString))
+        using (MySqlConnection connection = new MySqlConnection(connectionString))
         {
             connection.Open();
             string query = "SELECT es_administrador FROM usuarios WHERE nombre_usuario = @nombreUsuario";
-            SqlCommand command = new SqlCommand(query, connection);
+            MySqlCommand command = new MySqlCommand(query, connection);
             command.Parameters.AddWithValue("@nombreUsuario", nombreUsuario);
-            SqlDataReader reader = command.ExecuteReader();
+            MySqlDataReader reader = command.ExecuteReader();
 
             if (reader.Read())
             {
@@ -44,23 +43,33 @@ class Program
 
     static void AdministrarSistema()
     {
-        Console.WriteLine("Seleccione una opción:");
-        Console.WriteLine("1. Agregar nuevo usuario");
-        Console.WriteLine("2. Cambiar estado de ticket");
-        int opcion = int.Parse(Console.ReadLine());
+        bool continuar = true;
 
-        switch (opcion)
+        while (continuar)
         {
-            case 1:
-                AgregarUsuario();
-                break;
-            case 2:
-                CambiarEstadoTicket();
-                break;
-            default:
-                Console.WriteLine("Opción no válida.");
-                break;
+            Console.WriteLine("\nSeleccione una opción:");
+            Console.WriteLine("1. Agregar nuevo usuario");
+            Console.WriteLine("2. Cambiar estado de ticket");
+            Console.WriteLine("3. Salir");
+            int opcion = int.Parse(Console.ReadLine());
+
+            switch (opcion)
+            {
+                case 1:
+                    AgregarUsuario();
+                    break;
+                case 2:
+                    CambiarEstadoTicket();
+                    break;
+                case 3:
+                    continuar = false;
+                    break;
+                default:
+                    Console.WriteLine("Opción no válida.");
+                    break;
+            }
         }
+        Console.WriteLine("Gracias por usar el sistema.");
     }
 
     static void AgregarUsuario()
@@ -71,11 +80,11 @@ class Program
         Console.WriteLine("¿Es administrador? (true/false):");
         bool esAdministrador = bool.Parse(Console.ReadLine());
 
-        using (SqlConnection connection = new SqlConnection(connectionString))
+        using (MySqlConnection connection = new MySqlConnection(connectionString))
         {
             connection.Open();
             string query = "INSERT INTO usuarios (nombre_usuario, es_administrador) VALUES (@nombre_usuario, @es_administrador)";
-            SqlCommand command = new SqlCommand(query, connection);
+            MySqlCommand command = new MySqlCommand(query, connection);
             command.Parameters.AddWithValue("@nombre_usuario", nuevoNombre);
             command.Parameters.AddWithValue("@es_administrador", esAdministrador);
             command.ExecuteNonQuery();
@@ -92,11 +101,11 @@ class Program
         Console.WriteLine("Ingrese el nuevo estado del ticket:");
         string nuevoEstado = Console.ReadLine();
 
-        using (SqlConnection connection = new SqlConnection(connectionString))
+        using (MySqlConnection connection = new MySqlConnection(connectionString))
         {
             connection.Open();
             string query = "UPDATE tickets SET estado_ticket = @estado_ticket WHERE id_ticket = @id_ticket";
-            SqlCommand command = new SqlCommand(query, connection);
+            MySqlCommand command = new MySqlCommand(query, connection);
             command.Parameters.AddWithValue("@estado_ticket", nuevoEstado);
             command.Parameters.AddWithValue("@id_ticket", idTicket);
             command.ExecuteNonQuery();
@@ -107,19 +116,32 @@ class Program
 
     static void CrearTicket(string nombreUsuario)
     {
-        Console.WriteLine("Ingrese su solicitud:");
-        string solicitud = Console.ReadLine();
+        bool continuar = true;
 
-        using (SqlConnection connection = new SqlConnection(connectionString))
+        while (continuar)
         {
-            connection.Open();
-            string query = "INSERT INTO tickets (id_usuario, solicitud, estado_ticket) VALUES ((SELECT id_usuario FROM usuarios WHERE nombre_usuario = @nombreUsuario), @solicitud, 'Abierto')";
-            SqlCommand command = new SqlCommand(query, connection);
-            command.Parameters.AddWithValue("@nombreUsuario", nombreUsuario);
-            command.Parameters.AddWithValue("@solicitud", solicitud);
-            command.ExecuteNonQuery();
-        }
+            Console.WriteLine("\nIngrese su solicitud:");
+            string solicitud = Console.ReadLine();
 
-        Console.WriteLine("Ticket creado exitosamente.");
+            using (MySqlConnection connection = new MySqlConnection(connectionString))
+            {
+                connection.Open();
+                string query = "INSERT INTO tickets (id_usuario, solicitud, estado_ticket) VALUES ((SELECT id_usuario FROM usuarios WHERE nombre_usuario = @nombreUsuario), @solicitud, 'Abierto')";
+                MySqlCommand command = new MySqlCommand(query, connection);
+                command.Parameters.AddWithValue("@nombreUsuario", nombreUsuario);
+                command.Parameters.AddWithValue("@solicitud", solicitud);
+                command.ExecuteNonQuery();
+            }
+
+            Console.WriteLine("Ticket creado exitosamente.");
+
+            // Preguntar al usuario si desea crear otro ticket o salir
+            Console.WriteLine("\n¿Desea crear otro ticket? (s/n)");
+            string respuesta = Console.ReadLine().ToLower();
+            if (respuesta != "s")
+            {
+                continuar = false;
+            }
+        }
     }
 }
